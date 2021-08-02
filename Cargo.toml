@@ -1,9 +1,13 @@
 [package]
 name = "jvm-find"
 authors = ["Chris Moore <dev@chrismoore.dev>"]
-version = "0.1.0"
+version = "0.1.0" # remember to update html_root_url
 edition = "2018"
 license = "MIT OR Apache-2.0"
+description = "Easily locate a system's JVM installation"
+repository = "https://github.com/chrismooredev/jvm-find-rs"
+keywords = ["java", "jvm", "cross-platform"]
+categories = ["filesystem"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -12,7 +16,7 @@ thiserror = "1.0.26"
 glob = { version = "0.3.0", optional = true }
 
 [features]
-default-features = ["glob"]
+default = ["glob"]
 
 [[bin]]
 name = "jvm-find"
