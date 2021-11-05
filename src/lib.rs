@@ -1,5 +1,5 @@
 
-#![doc(html_root_url = "https://docs.rs/jvm-find/0.1.0")]
+#![doc(html_root_url = "https://docs.rs/jvm-find/0.1.1")]
 
 use std::io::ErrorKind;
 use std::path::{Path, PathBuf};
@@ -118,6 +118,8 @@ impl JavaHome {
 		// TODO: Query registry on windows?
 		// https://docs.oracle.com/javase/9/install/installation-jdk-and-jre-microsoft-windows-platforms.htm#JSJIG-GUID-C11500A9-252C-46FE-BB17-FC5A9528EAEB
 
+		log::debug!("finding currently active JAVA_HOME location by running the `java` command from the system path");
+
 		let output = Command::new("java")
 			.arg("-XshowSettings:properties")
 			.arg("-version")
@@ -126,12 +128,18 @@ impl JavaHome {
 
 		let stdout = String::from_utf8_lossy(&output.stdout);
 		let stderr = String::from_utf8_lossy(&output.stderr);
-		let java_home = stdout.lines()
+		let java_home_raw = stdout.lines()
 			.chain(stderr.lines())
-			.filter(|line| line.contains("java.home"))
-			.find_map(|line| line.find('=').map(|i| line[i+1..].trim()));
+			.find(|line| line.contains("java.home"));
+	
+		match &java_home_raw {
+			Some(l) => log::debug!("\tfound: {}", l),
+			None => log::debug!("\tnot found"),
+		};
 
-		match java_home {
+		let java_home = java_home_raw.map(|line| line.find('=').map(|i| line[i+1..].trim()));
+
+		match java_home.flatten() {
 			Some(path) => Ok(JavaHome { path: PathBuf::from(path) }),
 			None => Err(Error::NoJavaHomeProperty),
 		}
@@ -160,6 +168,7 @@ impl JavaHome {
 	#[cfg(feature = "glob")]
 	pub fn include(&self) -> Result<Option<Vec<PathBuf>>> {
 		let base = self.join("include");
+		log::debug!("looking for $JAVA_HOME/include at {:?}", base);
 
 		match base.metadata() {
 			Err(e) if e.kind() == ErrorKind::NotFound => Ok(None),
@@ -182,6 +191,10 @@ impl JavaHome {
 		let base = &self.path;
 		let escaped = glob::Pattern::escape(base.to_str().ok_or_else(|| Error::PathNotUTF8(base.clone()))?);
 		let pattern = escaped + "/**/" + NATIVE_LIBRARY_FILENAME;
+		log::debug!("looking for JVM native library with glob {:?}", pattern);
+		// developer note: if on linux, LD_LIBRARY_PATH may need to be set for the system loader to find it
+		// alternatively, is there a way to tell cargo to use the absolute path?
+
 		Ok(glob::glob(&pattern)
 			.unwrap() // pattern should always be valid
 			.next().ok_or(Error::NoNativeLibrary)??)
