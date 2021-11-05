@@ -129,7 +129,7 @@ impl JavaHome {
 		let java_home = stdout.lines()
 			.chain(stderr.lines())
 			.filter(|line| line.contains("java.home"))
-			.find_map(|line| line.find('=').map(|i| line[i..].trim()));
+			.find_map(|line| line.find('=').map(|i| line[i+1..].trim()));
 
 		match java_home {
 			Some(path) => Ok(JavaHome { path: PathBuf::from(path) }),
